@@ -5,13 +5,12 @@ import re
 
 class Topic:
     """Get Wikipedia topic information"""
-
     def __init__(self, topic_name):
         self.__topic_name = topic_name
         self.__link = f"https://en.wikipedia.org/wiki/{topic_name}"
 
     def checkValid(self):
-        return requests.get(self.__link)
+        return requests.get(self.__link).status_code
 
     def getTopicName(self):
         return self.__topic_name
@@ -54,7 +53,7 @@ class ParseWikiPage():
     __links_list = [] #store all previous links
     __next_link_topic = None #variable store topic of first link in page
 
-    def __init__(self,page_content):
+    def __init__(self, page_content):
         self.__page_content = page_content
 
     def first_content_link(self):
@@ -112,6 +111,6 @@ class ParseWikiPage():
         return self.__links_list        
 
 #testing
-wikipedia_page = WikiPageFetcher('freekick').fetch_page()
+wikipedia_page = WikiPageFetcher('spoon').fetch_page()
 
 ParseWikiPage(wikipedia_page).first_content_link()
