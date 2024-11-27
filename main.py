@@ -39,7 +39,7 @@ class WikiPageFetcher():
                 return True
         except requests.exceptions.RequestException:
             return False
-        
+
     def fetch_page(self): #fetches page html content
         try:
             self.__page_content = requests.get(self.__page_link).text
@@ -58,38 +58,40 @@ class ParseWikiPage():
 
     def __init__(self, page_content, original_topic):
         self.__page_content = page_content
-        self.__parsed_topics_list = [original_topic] #array containing, initial and subsequent topics completing at philosophy
+        self.__parsed_topics_list = [original_topic] #array containing, original and subsequent topics
 
     def find_philosophy(self):
         """iterates through topics breaks at philosophy"""
-        while not self.__parsed_topics_list[-1] == 'philosophy': #check last index not philosophy
-            time.sleep(2)
-            #loop until find philosophy 
-            #generate new requests for latest link? #call WikiPageFetcher class inside this class?
+        while not self.__parsed_topics_list[-1] == 'philosophy':
+            time.sleep(2) #DONT GET REQUEST BLOCKED
+
+            self.__page_content = WikiPageFetcher(self.__parsed_topics_list[-1]).fetch_page()
+
             self.find_next_topic(self.__parsed_topics_list[-1])
             print(self.__parsed_topics_list[-1])
-
+            
+        print(f"Topic count to philosophy: {len(self.__parsed_topics_list)}")
 
     def find_next_topic(self, current_topic):
         try:
             soup = BeautifulSoup(self.__page_content, 'html.parser')
             content_body = soup.find(id='mw-content-text')
 
-            if not content_body: #no content found in targeted div? TRY OTHER DIV?
+            if not content_body:
                 #find next link in current link?
                 raise BaseException('ParseWiki: No Topic Content Found.')
 
             for paragraph in content_body.find_all('p'):
-                #parse array of <a/>
                 if self.regex_search(paragraph.find_all('a')):
                     break
 
         except BaseException as e:
+            print('exception caught base exeption in [find_next_topic] func')
             return 'Fetch Link Error: Could not get next link from Topic content'
 
 
     def regex_search(self, a_tag_list):
-        """regex method to find /wiki/{word} returning first valid <a/>"""
+        """regex method to find /wiki/{word} returning first valid <a/> tag"""
 
         if not a_tag_list:
             return False
@@ -131,7 +133,7 @@ class ParseWikiPage():
 
 
 
-topic = WikiPageFetcher('spoon')
+topic = WikiPageFetcher('philosophy')
 
 links_to_philosophy = ParseWikiPage(topic.fetch_page(), topic.topic)
 #ParseWikiPage class returns full list of topics to philosophy?
