@@ -69,7 +69,7 @@ class ParseWikiPage():
 
             self.find_next_topic(self.__parsed_topics_list[-1])
             print(self.__parsed_topics_list[-1])
-            
+
         print(f"Topic count to philosophy: {len(self.__parsed_topics_list)}")
 
     def find_next_topic(self, current_topic):
@@ -97,7 +97,7 @@ class ParseWikiPage():
             return False
         try:
             for tag in a_tag_list: #parse over each <a/> tag
-                if re.search('wiki/[aA-zZ]', tag.get('href')) and tag.string not in self.__parsed_topics_list:
+                if re.search('wiki/[aA-zZ]', tag.get('href')) and tag.string not in self.__parsed_topics_list and tag.string != None:
                     self.__next_link_topic = tag.string
                     self.__next_link = f"https://en.wikipedia.org{tag.get('href')}"
                     self.__parsed_topics_list.append(tag.string)
@@ -133,7 +133,7 @@ class ParseWikiPage():
 
 
 
-topic = WikiPageFetcher('philosophy')
+topic = WikiPageFetcher('socrates')
 
 links_to_philosophy = ParseWikiPage(topic.fetch_page(), topic.topic)
 #ParseWikiPage class returns full list of topics to philosophy?
