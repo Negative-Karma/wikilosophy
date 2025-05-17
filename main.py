@@ -167,8 +167,12 @@ class ParseWikiPage():
             return 'Error viewing page'
 
 
-topic = WikiPageFetcher('football')
+try:
+    topic = WikiPageFetcher('chicken')
 
-scraper = ParseWikiPage(topic.fetch_page(), topic.topic)
+    scraper = ParseWikiPage(topic.fetch_page(), topic.topic)
 
-scraper.find_philosophy()
+    scraper.find_philosophy()
+except BaseException as e:
+    print(e)
+    exit()
