@@ -2,9 +2,9 @@ from bs4 import BeautifulSoup
 import requests
 import re
 import time
+from exceptions import TopicNotFoundError, HTMLParsingError, ParseWikiError
 
-
-class WikiPageFetcher():
+class WikiPageFetcher:
     """
     fetches and scrapes topic data from Wikipedia website
     """
@@ -18,20 +18,23 @@ class WikiPageFetcher():
         self.topic = topic
         self.__page_link = f"https://en.wikipedia.org/wiki/{topic}"
         
-        if not self.check_valid_wiki():
-            raise ValueError(f'Wikipedia Page Not Found {self.__page_link}')
+        self.check_valid_wiki()
 
     def check_valid_wiki(self):
         """
         checks if page on topic page exists
-        returns False if does not exist
+        raises exception on request error
         """
         try:
             r = requests.get(self.__page_link)
             if r.status_code == 200:
                 return True
-        except requests.exceptions.RequestException:
-            return False
+            elif r.status_code in [400, 404]:
+                raise requests.HTTPError(f'Wikipedia page not found: {self.__page_link}')
+            elif r.status_code in [500, 501, 503, 504]:
+                raise requests.HTTPError('Wikipedia seems to be down. Please try agian later')
+        except requests.RequestException as err:
+            raise
 
     def fetch_page(self):
         """
@@ -40,8 +43,8 @@ class WikiPageFetcher():
         try:
             self.__page_content = requests.get(self.__page_link).text
             return self.__page_content
-        except (ValueError, requests.exceptions.RequestException) as e:
-            return e
+        except (ValueError, requests.RequestException) as err:
+            raise
         
     def get_link(self):
         """
@@ -50,7 +53,7 @@ class WikiPageFetcher():
         return self.__page_link
         
 
-class ParseWikiPage():
+class ParseWikiPage:
     """
     parse over fetched wikipedia page content html returned from WikiPageFetcher class
     """
@@ -69,7 +72,7 @@ class ParseWikiPage():
         while not self.__parsed_topics_list[-1] == 'philosophy':
             #compare loop count to topic count; if loop count > topic_count; break
             if loop_count > len(self.__parsed_topics_list):
-                raise BaseException('ParseWikiError: No more topics being found')
+                raise TopicNotFoundError('No next topic found', topic=self.__parsed_topics_list[-1])
 
             time.sleep(2) #REQUEST DELAY
 
@@ -90,24 +93,22 @@ class ParseWikiPage():
             content_body = soup.find(id='mw-content-text')
 
             if not content_body:
-                #STRANGE HTML ERROR? 
-                raise BaseException('ParseWikiError: No Topic Content Found.') #BaseException correct error?
+                raise HTMLParsingError('No Wikipedia content found for topic', topic=self.__parsed_topics_list[-1])
 
             #checks if HTML is list wikipedia content
             if len(content_body.find_all('p')) == 1:
                 for topic in content_body.find_all('li'):
                     if self.regex_search(topic.find_all('a')):
-                        break
+                        return
 
             for paragraph in content_body.find_all('p'):
                 if self.regex_search(paragraph.find_all('a')):
-                    break
+                    return 
 
-            raise BaseException('No next topic found?')
+            raise TopicNotFoundError('No next topic found', topic=self.__parsed_topics_list[-1])
             
-        except BaseException as e:
-            self.view_page_body()
-            return BaseException('Fetch Link Error: Could not get next link from Topic content')
+        except (requests.RequestException, HTMLParsingError, TopicNotFoundError) as err:
+            raise
 
 
     def regex_search(self, a_tag_list):
@@ -125,21 +126,16 @@ class ParseWikiPage():
                     self.__parsed_topics_list.append(a_tag.string)
                     return a_tag
             return False    
-        except BaseException as e:
-            #WHAT OCCURS HERE>????
-            #HANDLE NO NEXT TOPIC?
-            #ITERATE UNTIL NEXT TOPIC FOUND?
-            print('exception raised in regex parsewiki regex search function')
-            raise ValueError(e)
-
+        except Exception as e:
+            raise HTMLParsingError('Error parsing <a>', topic=self.__parsed_topics_list[-1])
 
     def all_prev_links(self):
         """
         returns all previous topics parsed through
         """
-        if not self.__links_list:
+        if not self.__parsed_topics_list:
             return f'0 links found for content f{self.topic}'
-        return self.__links_list
+        return self.__parsed_topics_list
 
     def get_prev_link(self):
         """
@@ -162,17 +158,17 @@ class ParseWikiPage():
         """
         try:
             soup = BeautifulSoup(self.__page_content, 'html.parser')
-            content_body = soup.find_all('p')
+            return soup
         except:
-            return 'Error viewing page'
+            raise HTMLParsingError('Error displaying HTML page content', topic=self.__parsed_topics_list[-1])
 
 
 try:
-    topic = WikiPageFetcher('chicken')
-
-    scraper = ParseWikiPage(topic.fetch_page(), topic.topic)
-
-    scraper.find_philosophy()
-except BaseException as e:
-    print(e)
-    exit()
+    topic = WikiPageFetcher('spoon')
+    wiki_scraper = ParseWikiPage(topic.fetch_page(), topic.topic)
+    wiki_scraper.find_philosophy()
+except Exception as err:
+    if isinstance(err, ParseWikiError):
+        print(f"Topic: {err.topic}\n", err)
+    else:
+        print(err)
