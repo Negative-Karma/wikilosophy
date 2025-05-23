@@ -1,7 +1,5 @@
 ~~All roads lead to Rome~~
 
-All links lead to Philosophy
+*All links lead to Philosophy*
 
-
-Future features:
-- Generate 'Tree graph' of topic path/route
+Python webscraper that traces any Wikipedia topic through the first link of each article until it reaches Philosophy — or breaks.
